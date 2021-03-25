@@ -1,47 +1,65 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Tasks from "./components/Tasks";
+import AddTask from "./components/AddTask";
 
-function App() {
-  const [tasks, setTasks] = useState([
-    {
-      id: 1,
-      text: "치과 방문",
-      day: "3월 29일 14:30",
-      reminder: true,
-    },
-    {
-      id: 2,
-      text: "팀플 회의",
-      day: "4월 1일 17:00",
-      reminder: true,
-    },
-    {
-      id: 3,
-      text: "제주도 여행",
-      day: "4월 3일 09:30",
-      reminder: false,
-    },
-  ]);
+const App = () => {
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [tasks, setTasks] = useState([]);
 
-  const deleteTask = (id) => {
+  useEffect(() => {
+    const getTasks = async () => {
+      const tasksFromServer = await fetchTasks();
+      setTasks(tasksFromServer);
+    };
+    getTasks();
+  }, []);
+
+  // Fetch Tasks
+  const fetchTasks = async () => {
+    const res = await fetch("http://localhost:5000/tasks");
+    const data = await res.json();
+    return data;
+  };
+
+  const onClickDel = async (id) => {
+    await fetch(`http://localhost:5000/tasks/${id}`, {
+      method: "DELETE",
+    });
+
     setTasks(tasks.filter((task) => task.id !== id));
+  };
+
+  const onCreate = async (task) => {
+    const res = await fetch("http://localhost:5000/tasks", {
+      method: "POST",
+      headers: {
+        "Content-type": "application/json",
+      },
+      body: JSON.stringify(task),
+    });
+    const data = await res.json();
+
+    setTasks([...tasks, data]);
+
+    // setTasks([...tasks, task]);
   };
 
   const toggleReminder = (id) => {
     setTasks(tasks.map((task) => (task.id === id ? { ...task, reminder: !task.reminder } : task)));
   };
 
+  const toggleShow = () => {
+    setShowAddTask(!showAddTask);
+  };
+
   return (
     <div className="container">
-      <Header />
-      {tasks.length > 0 ? (
-        <Tasks tasks={tasks} onDelete={deleteTask} onToggle={toggleReminder} />
-      ) : (
-        "No Tasks To Show."
-      )}
+      <Header onShow={toggleShow} showAddTask={showAddTask} />
+      {showAddTask && <AddTask tasks={tasks} onCreate={onCreate} />}
+      <Tasks tasks={tasks} onDelete={onClickDel} onToggle={toggleReminder} />
     </div>
   );
-}
+};
 
 export default App;
